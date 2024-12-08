@@ -1,13 +1,8 @@
-import { Checkbox, IconButton } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { useAppDispatch } from '../store/hooks';
-import { addNewTask, editTask, removeTask, Task, useDeleteTaskMutation, useGetTasksQuery, useUpdateTaskMutation } from '../store/todos/todoSlice';
+import { useGetTasksQuery } from '../store/todos/todoSlice';
+import TaskDetali from './TaskDetali';
 
 function TaskList() {
-    const dispatch = useAppDispatch()
     const { data: tasks, isLoading } = useGetTasksQuery()
-    const [updateTask] = useUpdateTaskMutation()
-    const [deleteTask] = useDeleteTaskMutation()
 
     if (isLoading) {
         return (
@@ -20,53 +15,16 @@ function TaskList() {
         )
     }
 
-    const handleChange = (task: Task) => {
-        // Optimistically update the UI
-        const updatedTask = { ...task, done: !task.done };
 
-        dispatch(editTask(updatedTask));
-
-        // Call the mutation
-        updateTask(updatedTask)
-            .unwrap()
-            .catch((error) => {
-                console.error('Error editing task:', error);
-                // Rollback the change if the mutation fails
-                dispatch(editTask(updatedTask));
-            });
-    }
-
-    const handleRemove = (task: Task) => {
-        dispatch(removeTask(task));
-
-        deleteTask(task.id)
-            .unwrap()
-            .catch((error) => {
-                console.error('Error deleting task:', error);
-                dispatch(addNewTask(task));
-            });
-    }
 
   return (
-
     <ul>
       {tasks.map((task) => (
         <li
             key={task.id}
             style={{ listStyleType: "none", paddingLeft: 0 }}
         >
-            <Checkbox
-                checked={task.done}
-                onChange={() => handleChange(task)}
-            />
-
-            {task.text}
-
-            <IconButton
-                onClick={() => handleRemove(task)}
-            >
-                <DeleteIcon />
-            </IconButton>
+            <TaskDetali task={task}/>
         </li>
       ))}
     </ul>

@@ -1,10 +1,9 @@
 import { configureStore } from '@reduxjs/toolkit'
-import { taskSlice, todoApi } from './todos/todoSlice'
+import { todoApi } from './todos/todoSlice'
 
 export const makeStore = () => {
     return configureStore({
         reducer: {
-            tasks: taskSlice.reducer,
             [todoApi.reducerPath]: todoApi.reducer,
         },
         middleware: (getDefaultMiddleware) => getDefaultMiddleware()
