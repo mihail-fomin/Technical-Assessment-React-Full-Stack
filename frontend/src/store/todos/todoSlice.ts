@@ -1,46 +1,76 @@
-import { createSlice, Middleware } from '@reduxjs/toolkit'
+import { createSlice } from '@reduxjs/toolkit'
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-type Task = {
+export type Task = {
     id: number
     text: string
     done: boolean
 }
 
-const initialTasks = [
-    { id: 1, text: 'Visit Venice', done: true },
-    { id: 2, text: 'Visit Athens', done: true },
-    { id: 3, text: 'Visit Rome', done: false },
-]
+export const todoApi = createApi({
+    baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:3000' }),
+    tagTypes: ['Task'],
+    endpoints: (build) => ({
+      getTasks: build.query<Task[], void>({
+        query: () => 'tasks',
+        providesTags: (result) =>
+            result
+              ? [
+                  ...result.map(({ id }) => ({ type: 'Task' as const, id })),
+                  { type: 'Task', id: 'LIST' },
+                ]
+              : [{ type: 'Task', id: 'LIST' }],
+      }),
 
-export const middleware: Middleware = (store) => (next) => (action: any) => {
-    const result = next(action) // Call next middleware or reducer first
+      addTask: build.mutation<Task, Pick<Task, 'text'>>({
+        query: (body) => ({
+          url: 'tasks',
+          method: 'POST',
+          body,
+        }),
+        invalidatesTags: [{ type: 'Task', id: 'LIST' }],
+      }),
 
-    if (
-        action.type === 'tasks/addNewTask' ||
-        action.type === 'tasks/editTask' ||
-        action.type === 'tasks/removeTask' ||
-        action.type === 'tasks/clearTasks'
-    ) {
-        const tasksState = store.getState().tasks // Get the current tasks state
+      updateTask: build.mutation<void, Pick<Task, 'id'> & Partial<Task>>({
+        query: ({ id, ...patch }) => ({
+          url: `tasks/${id}`,
+          method: 'PATCH',
+          body: patch,
+        }),
+        invalidatesTags: (_result, _error, { id }) => [{ type: 'Task', id }],
+      }),
 
-        // Store the tasks items in local storage
-        localStorage.setItem('tasks', JSON.stringify(tasksState.tasks))
-    }
+      deleteTask: build.mutation<{ success: boolean; id: number }, number>({
+        query(id) {
+          return {
+            url: `tasks/${id}`,
+            method: 'DELETE',
+          }
+        },
+        invalidatesTags: (_result, _error, id) => [{ type: 'Task', id }],
+      })
+    }),
+});
 
-    return result
-}
+export const {
+    useGetTasksQuery,
+    useAddTaskMutation,
+    useUpdateTaskMutation,
+    useDeleteTaskMutation,
+} = todoApi;
 
-const tasks = localStorage.getItem('tasks')
-const parsedTasks: Task[] = tasks ? JSON.parse(tasks) : []
 
 const initialState = {
-    tasks: parsedTasks.length ? parsedTasks : initialTasks,
+    tasks: [] as Task[],
 }
 
 export const taskSlice = createSlice({
     name: 'tasks',
     initialState,
     reducers: {
+        setNewTasks: (state, action) => {
+            state.tasks = action.payload
+        },
         addNewTask: (state, action) => {
             const id = Date.now()
             state.tasks.push({
@@ -69,5 +99,5 @@ export const taskSlice = createSlice({
     },
 })
 
-export const { addNewTask, editTask, removeTask, clearTasks } = taskSlice.actions
+export const { setNewTasks, addNewTask, editTask, removeTask, clearTasks } = taskSlice.actions
 

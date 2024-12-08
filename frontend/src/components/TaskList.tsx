@@ -1,22 +1,50 @@
-import React from 'react';
 import { Checkbox, IconButton } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { editTask, removeTask } from '../store/todos/todoSlice';
-
-const FILTER_ALL = 0;
-const FILTER_DONE = 1;
-const FILTER_ACTIVE = 2;
+import { useAppDispatch } from '../store/hooks';
+import { addNewTask, editTask, removeTask, Task, useDeleteTaskMutation, useGetTasksQuery, useUpdateTaskMutation } from '../store/todos/todoSlice';
 
 function TaskList() {
-  const [filter, setFilter] = React.useState(FILTER_ALL);
-  const dispatch = useAppDispatch()
-  const tasks = useAppSelector((state) => state.tasks.tasks)
+    const dispatch = useAppDispatch()
+    const { data: tasks, isLoading } = useGetTasksQuery()
+    const [updateTask] = useUpdateTaskMutation()
+    const [deleteTask] = useDeleteTaskMutation()
 
-    if (!tasks.length) {
-     return (
+    if (isLoading) {
+        return (
+            <p>Loading...</p>
+    )}
+
+    if (!tasks?.length) {
+        return (
             <p>No tasks found.</p>
         )
+    }
+
+    const handleChange = (task: Task) => {
+        // Optimistically update the UI
+        const updatedTask = { ...task, done: !task.done };
+
+        dispatch(editTask(updatedTask));
+
+        // Call the mutation
+        updateTask(updatedTask)
+            .unwrap()
+            .catch((error) => {
+                console.error('Error editing task:', error);
+                // Rollback the change if the mutation fails
+                dispatch(editTask(updatedTask));
+            });
+    }
+
+    const handleRemove = (task: Task) => {
+        dispatch(removeTask(task));
+
+        deleteTask(task.id)
+            .unwrap()
+            .catch((error) => {
+                console.error('Error deleting task:', error);
+                dispatch(addNewTask(task));
+            });
     }
 
   return (
@@ -27,16 +55,18 @@ function TaskList() {
             key={task.id}
             style={{ listStyleType: "none", paddingLeft: 0 }}
         >
-          <Checkbox
-            checked={task.done}
-            onChange={() => dispatch(editTask(task))}
-          />
-          {task.text}
-          <IconButton
-            onClick={() => dispatch(removeTask(task))}
+            <Checkbox
+                checked={task.done}
+                onChange={() => handleChange(task)}
+            />
+
+            {task.text}
+
+            <IconButton
+                onClick={() => handleRemove(task)}
             >
-            <DeleteIcon />
-          </IconButton>
+                <DeleteIcon />
+            </IconButton>
         </li>
       ))}
     </ul>
