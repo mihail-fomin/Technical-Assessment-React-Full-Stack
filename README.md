@@ -72,4 +72,3 @@ yarn dev
 ```
 
 Now you should be able to access the application at http://localhost:5173/.
-```
